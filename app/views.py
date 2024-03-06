@@ -6,6 +6,9 @@ from werkzeug.utils import secure_filename
 from app.models import UserProfile
 from app.forms import LoginForm, UploadForm
 from flask import send_from_directory
+from flask_login import logout_user
+from datetime import datetime
+import secrets
 
 
 # You will need to import the appropriate function to do so.
@@ -37,10 +40,12 @@ def upload():
         # Get file data and save to your uploads folder
         uploadedPhoto = form.file.data # we could also use request.files['photo']
         filename = secure_filename(uploadedPhoto.filename)
+       
         uploadedPhoto.save(os.path.join(
             app.config['UPLOAD_FOLDER'], filename
         ))
 
+          
         flash('File upload sucessfully', 'success')
         return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
 
@@ -80,24 +85,22 @@ def login():
 import os
 
 
-
-# Change file permissions
-def change_file_permissions(file_path, permissions):
-    os.chmod(file_path, permissions)
-
 def get_uploaded_images():
     upload_folder = app.config['UPLOAD_FOLDER']
     uploaded_images = []
-    new_permissions = 0o644  # Owner: read/write, Group & Others: read-only
 
-    for subdir, _, files in os.walk(upload_folder):
-        for file in files:
-            if file.endswith(('.jpg', '.png')):
-                file_path = os.path.join(subdir, file)
-                change_file_permissions(file_path, new_permissions)
-                uploaded_images.append(file_path)
+    if not os.path.exists(upload_folder):
+        flash("File not found. Your uploads folder may have been removed")
     
+    for filename in os.listdir(upload_folder):
+        # Check if the path is a file (not a directory)
+            if os.path.isfile(os.path.join(upload_folder, filename)):
+                if filename.endswith(('.jpg', '.png')):
+                    uploaded_images.append(filename)
+    
+
     return uploaded_images
+
 
 
 
@@ -110,10 +113,17 @@ def get_image(filename):
 
 
 @app.route('/files')
-# @login_required
+@login_required
 def files():
     images_ = get_uploaded_images()
     return render_template('files.html', images=images_)
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('login'))
 
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
