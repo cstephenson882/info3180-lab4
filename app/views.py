@@ -5,6 +5,8 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
 from app.forms import LoginForm, UploadForm
+from flask import send_from_directory
+
 
 # You will need to import the appropriate function to do so.
 from werkzeug.security import check_password_hash
@@ -34,8 +36,6 @@ def upload():
     if form.validate_on_submit():
         # Get file data and save to your uploads folder
         uploadedPhoto = form.file.data # we could also use request.files['photo']
-        filename = secure_filename(uploadedPhoto.filename)
-
         filename = secure_filename(uploadedPhoto.filename)
         uploadedPhoto.save(os.path.join(
             app.config['UPLOAD_FOLDER'], filename
@@ -75,6 +75,45 @@ def login():
             # return redirect(url_for('login'))
         
     return render_template("login.html", form=form)
+
+
+import os
+
+
+
+# Change file permissions
+def change_file_permissions(file_path, permissions):
+    os.chmod(file_path, permissions)
+
+def get_uploaded_images():
+    upload_folder = app.config['UPLOAD_FOLDER']
+    uploaded_images = []
+    new_permissions = 0o644  # Owner: read/write, Group & Others: read-only
+
+    for subdir, _, files in os.walk(upload_folder):
+        for file in files:
+            if file.endswith(('.jpg', '.png')):
+                file_path = os.path.join(subdir, file)
+                change_file_permissions(file_path, new_permissions)
+                uploaded_images.append(file_path)
+    
+    return uploaded_images
+
+
+
+
+
+
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route('/files')
+# @login_required
+def files():
+    images_ = get_uploaded_images()
+    return render_template('files.html', images=images_)
 
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
