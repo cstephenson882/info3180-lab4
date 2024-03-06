@@ -26,6 +26,7 @@ def about():
 
 
 @app.route('/upload', methods=['POST', 'GET'])
+@login_required
 def upload():
     # Instantiate your form class
     form = UploadForm()
@@ -40,7 +41,7 @@ def upload():
             app.config['UPLOAD_FOLDER'], filename
         ))
 
-        flash('File Saved', 'success')
+        flash('File upload sucessfully', 'success')
         return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
 
     return render_template('upload.html', form =form)
